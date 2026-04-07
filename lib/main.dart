@@ -7,18 +7,38 @@ void main() {
   runApp(ProviderScope(child: const MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Future increment() async {
-      ref.read(incrementProvider.notifier).state++;
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    loadNumber();
+    super.initState();
+  }
+
+  Future saveIncrement(int savedNum) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('counter', savedNum);
+  }
+
+  Future loadNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? current = prefs.getInt('counter');
+    if (current != null) {
+      ref.read(incrementProvider.notifier).state = current;
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     int num = ref.watch(incrementProvider);
-
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(title: Text('Riverpod Counter')),
         body: SizedBox(
@@ -27,8 +47,24 @@ class MyApp extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('The increment number is $num'),
-              ElevatedButton(onPressed: increment, child: Text('Increment')),
+              FittedBox(
+                child: Padding(
+                  padding: const EdgeInsets.all(50.0),
+                  child: Text(
+                    'The increment number is $num',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                ),
+              ),
+              SizedBox(height: 110),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(incrementProvider.notifier).state++;
+                  saveIncrement(ref.read(incrementProvider));
+                },
+
+                child: Text('Increment'),
+              ),
             ],
           ),
         ),
